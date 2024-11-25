@@ -38,6 +38,7 @@ sate_threedB = 3.5  #°                        3dB角
 R_earth = 6371e3 # m                        地球半径
 
 #基站参数
+barrier_height = 10 #m                      屏障高度
 BS_INT_TH = -123 #dBW                       干扰阈值
 bs_num = 7 #                               基站数量
 Power_bs = 17 #17-22dBW                     基站功率

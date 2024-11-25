@@ -36,6 +36,7 @@ class downlink_transmision_tool:
         # self.PowerT_beam = 10  #dBw   #3W
         
         #基站参数
+        self.barrier_height = Parameters.barrier_height  # 障碍物高度
         self.BS_TNT_TH = Parameters.BS_INT_TH   #干扰阈值
         self.Power_bs = Parameters.Power_bs
         self.Gain_bs = Parameters.Gain_bs
@@ -171,12 +172,28 @@ class downlink_transmision_tool:
         1:这里没有考虑的是天线与用户有夹角
         """
         return 10**((self.Gain_bs/10)+(np.max([-0.6*(angle_antenna_user/self.bs_threedB)**2,-(self.front_to_back_ratio/10)])))
-    def get_bs_diffraction_loss(self,req_user_info):
+    def get_bs_diffraction_loss(self, req_user_info, h, frequency):
         """
-        计算绕射损失，正在调研中
+        计算单刀刃绕射模型的损耗。
+
+        参数:
+        d1 (float): 发射端与障碍物的距离。
+        d2 (float): 接收端与障碍物的距离。
+        h (float): 障碍物的高度。
+        lambda_ (float): 波长。
+
+        返回:
+        float: 绕射损耗（单位：分贝）。
         """
-        DIFFRACTION_LOSS=np.array([-1 for _ in range(len(req_user_info))])
-        return DIFFRACTION_LOSS
+        # 计算公式中的菲涅尔-基尔霍夫绕射参数v
+        d1 = np.array(req_user_info["Dis_Bs"])/2
+        d2 = np.array(req_user_info["Dis_Bs"])/2
+        lambda_ = self.velocity / frequency
+        v = h * np.sqrt((2 * (d1 + d2)) / (lambda_ * d1 * d2))
+        # 计算总损耗
+        DIFFRACTION_LOSS = 20 * np.log10(np.sqrt((v-0.1)**2 + 1) + v - 0.1) + 6.9
+        print("DIFFRACTION_LOSS",DIFFRACTION_LOSS)
+        return - DIFFRACTION_LOSS
     def get_bs_gain(self, req_user_info,bs_lla):
         """
         计算增益矩阵
@@ -221,7 +238,7 @@ class downlink_transmision_tool:
 
         Gain_matrix = self.get_bs_gain(req_user_info,bs_lla)#获取增益矩阵
         Path_loss_matrxi = self.get_bs_loss_path(req_user_info)#计算每个用户的路径损耗
-        Diffraction_loss_matrxi = self.get_bs_diffraction_loss(req_user_info)
+        Diffraction_loss_matrxi = self.get_bs_diffraction_loss(req_user_info, self.barrier_height, self.frequency)
         self.req_user_num = len(req_user_info)
         for _,bs_id_state in enumerate(bs_state):          #遍历每个基站                                                        #i 就是代表这个请求用户会被服务，计算这个用户的sinr就行
             user_sa=bs_id_state["user_sa"]                      #当前小区的卫星用户
@@ -251,6 +268,7 @@ class downlink_transmision_tool:
                 max_sinr = power_self / self.noisy
                 self.sinr_matrix[user_bs_id] = sinr
                 self.max_sinr_matrix[user_bs_id] = max_sinr
+        print('self.sinr_matrix',self.sinr_matrix)
         return True
 def calculate_datarate(Action_beam, req_user_info, req_list,bs_lla,bs_state):
     """

@@ -11,7 +11,7 @@ import ppo_core
 from SINR_Calculate import *
 from collections import defaultdict
 import matplotlib
-matplotlib.use('tkagg') # Must be before importing matplotlib.pyplot or pylab!
+# matplotlib.use('tkagg') # Must be before importing matplotlib.pyplot or pylab!
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 import ppo_reward
