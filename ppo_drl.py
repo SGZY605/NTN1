@@ -292,7 +292,7 @@ def ppo(env_fn, actor_critic=ppo_core.RA_ActorCritic, ac_kwargs=dict(), seed=0,
             a, v, logp = ac.step(obs,mask)
             print("=======================动作a=================\n",a)
             print("action",a)
-            o_info, next_o, extra,reward,done = env.step(a)
+            o_info, next_o, extra,reward,rrr_tx,done = env.step(a)
             print(o_info)
             info_sa,info_bs=get_env_info(extra)
             # 当前的一个obs_tti
@@ -300,7 +300,7 @@ def ppo(env_fn, actor_critic=ppo_core.RA_ActorCritic, ac_kwargs=dict(), seed=0,
              #只计算吞吐量的奖励
             tti_rdelay = 0 #! 暂时没有考虑时延
             threa_b = 1
-            tti_reward = threa_b*reward + (1-threa_b)*tti_rdelay
+            tti_reward = threa_b*rrr_tx + (1-threa_b)*tti_rdelay
             ###########################################################################################
             ep_tx += info_sa['Down_TxData']#每一个epoch的总传输量
             ep_newbytes += info_sa['NewData']
@@ -349,6 +349,7 @@ def ppo(env_fn, actor_critic=ppo_core.RA_ActorCritic, ac_kwargs=dict(), seed=0,
                                  sumtx=sum_tx, Ep_capacity=ep_capacity,
                                  Error=error)
                 s0,o = env.reset()
+                print(s0)
     
         # Save model
         if (epoch % save_freq == 0) or (epoch == epochs - 1):

@@ -6,7 +6,7 @@ import Parameters
 import Satellite_run
 from scipy.special import jn
 import Satellite_Bs
-
+import cvxpy as cp
 
 
 class downlink_transmision_tool:
@@ -18,6 +18,7 @@ class downlink_transmision_tool:
 
         #通信参数
         self.bw = Parameters.bw          #带宽 500e6 HZ
+        self.T_b = Parameters.T_b          #时隙时间
         self.frequency = Parameters.frequency #中心频率2e10   # Hz
         self.velocity = 3e8
         self.gama = 0.5
@@ -28,7 +29,7 @@ class downlink_transmision_tool:
         self.sate_xyz = Parameters.sate_xyz
         self.Hleo = Parameters.HLeo           #550000   # m
         self.Power_SateTotal = Parameters.Power_SateTotal   #30dBW
-        self.Power_Beam = self.Power_SateTotal/ Parameters.beam_open
+        self.Power_Beam_average = 10*np.log10(10**(self.Power_SateTotal/10) / Parameters.beam_open)
         self.Power_BeamMax = Parameters.Power_BeamMax     #0.8*total
         self.Gain_beam = Parameters.Gain_Beam            #42dBi
         self.sate_threedB = Parameters.sate_threedB      #1dB
@@ -135,19 +136,19 @@ class downlink_transmision_tool:
             else:
                 #首先这个用户会接受来自自己的增益
                 Gain_self = 10 * np.log10(Gain_matrix[i][i]) #dBi
-                power_self = 10 ** ((Gain_self + self.Gr_user + Path_loss_matrxi[0][i]) /10) * (10**(self.Power_Beam/10)) #W
+                power_self = 10 ** ((Gain_self + self.Gr_user + Path_loss_matrxi[0][i]) /10) * (10**(self.Power_Beam_average/10)) #W
                 for j in range(self.req_user_num):
                     if i == j or action[j] == 0:
                         continue
                     else:
                         Gain_interf = 10 * np.log10(Gain_matrix[j][i]) #dBi
-                        interf = 10 ** ((Gain_interf+self.Gr_user + Path_loss_matrxi[0][i]) /10) * (10 ** (self.Power_Beam/10)) #  #其他波束干扰+bs干扰阈值
+                        interf = 10 ** ((Gain_interf+self.Gr_user + Path_loss_matrxi[0][i]) /10) * (10 ** (self.Power_Beam_average/10)) #  #其他波束干扰+bs干扰阈值
                         interference += interf
                 interference += 10 ** (self.BS_TNT_TH / 10) #最后加上来自基站的干扰
                 #interference = 10 ** ((self.Gr_user + Path_loss_matrxi[0][i]) / 10) * interference 
-                sinr = power_self / (self.noisy + interference)
+                sinr_average = power_self / (self.noisy + interference)
                 max_sinr = power_self / (self.noisy + 10 ** (self.BS_TNT_TH / 10))
-                self.sinr_matrix[i] = sinr
+                self.sinr_matrix[i] = sinr_average
                 self.max_sinr_matrix[i] = max_sinr
         return Gain_matrix,Path_loss_matrxi
 
@@ -260,7 +261,7 @@ class downlink_transmision_tool:
                 for user_sa_id in user_sa:
                     
                     Gain_sa_interf = 10 * np.log10(Gain_sa_matrix[user_sa_id][user_bs_id]) #dBi  来自其他基站内卫星用户的增益矩阵
-                    interf = 10 ** ((Gain_sa_interf+self.Gr_user + Path_loss_sa[0][user_bs_id]) /10) * (10 ** (self.Power_Beam/10)) #  其他基站内被卫星服务的用户的干扰
+                    interf = 10 ** ((Gain_sa_interf+self.Gr_user + Path_loss_sa[0][user_bs_id]) /10) * (10 ** (self.Power_Beam_average/10)) #  其他基站内被卫星服务的用户的干扰
                     interference += interf
 
                 #interference = 10 ** ((self.Gr_user + Path_loss_matrxi[user_bs_id]) / 10) * interference 
@@ -268,7 +269,7 @@ class downlink_transmision_tool:
                 max_sinr = power_self / self.noisy
                 self.sinr_matrix[user_bs_id] = sinr
                 self.max_sinr_matrix[user_bs_id] = max_sinr
-        print('self.sinr_matrix',self.sinr_matrix)
+        # print('self.sinr_matrix',self.sinr_matrix)
         return True
 def calculate_datarate(Action_beam, req_user_info, req_list,bs_lla,bs_state):
     """
