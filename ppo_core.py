@@ -92,6 +92,11 @@ class MultiCategoricalActor(Actor):
         elif Network_Choose == 2:
             batch_size = 1 if len(obs.shape) == 1 else obs.shape[0]
             inp = torch.cat((obs,req_list), 0 if len(obs.shape) == 1 else 1)
+            if torch.any(torch.isnan(inp)):
+                print("检查NAN!!!!!!!!!!!!!!!!!", torch.isnan(inp))
+                raise ValueError("nan in input")
+            if torch.any():
+                print("检查INF!!!!!!!!!!!!!!!!!", torch.isinf(inp))
             logits = self.logits_net(inp)
             mask = ~(req_list.bool()).repeat(1, self.beam_open).view(batch_size,self.beam_open,self.user_num)
             logits = logits.reshape(batch_size,self.beam_open,self.user_num)
