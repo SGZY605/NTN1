@@ -19,6 +19,8 @@ import random
 import itertools
 import Parameters
 import Tool_Calculate
+import warnings
+warnings.filterwarnings("ignore", category=UserWarning)
 ax = []  # 定义一个 x 轴的空列表用来接收动态的数据
 ay = []  # 定义一个 y 轴的空列表用来接收动态的数据
 plt.ion()  # 开启一个画图的窗口
@@ -144,7 +146,7 @@ ppo(statellite_run,
 '''
 #ac_kwargs 字典包含用于初始化 Actor-Critic 模型的参数设置
 #steps_per_epoch  模型与环境交互的次数，更新次数
-def ppo(env_fn, actor_critic=ppo_core.RA_ActorCritic, ac_kwargs=dict(), seed=0,
+def ppo(env_fn, trace_dir, today, actor_critic=ppo_core.RA_ActorCritic, ac_kwargs=dict(), seed=0,
         steps_per_epoch=50, epochs=10000, gamma=0.99, clip_ratio=0.2, pi_lr=3e-4,
         vf_lr=1e-3, train_pi_iters=80, train_v_iters=80, lam=0.97, max_ep_len=50,
         target_kl=0.01, logger_kwargs=dict(), save_freq=30, use_cuda=True):
@@ -360,7 +362,7 @@ def ppo(env_fn, actor_critic=ppo_core.RA_ActorCritic, ac_kwargs=dict(), seed=0,
         ax.cla()  # clear plot
         ax.plot(x, y, 'r', lw=1)  # draw line chart
         plt.pause(0.1)
-        plt.savefig('./ppo-sate-bs.jpg')
+        plt.savefig(trace_dir + '/' + today + '-ppo-sate-bs.jpg')
         start_time = time.time()
         update()
         end_time = time.time()
@@ -380,14 +382,14 @@ if __name__ == '__main__':
 
     from spinup.utils.run_utils import setup_logger_kwargs
     import os
-
+    today = time.strftime("%Y-%m-%d-%p",time.localtime(time.time()))
     trace_dir = os.getcwd() + "/result"
     logger_kwargs = setup_logger_kwargs("ppo-beam2", data_dir=trace_dir, datestamp=True)#时间戳
     ppo(Satellite_run,
         actor_critic=ppo_core.RA_ActorCritic, ac_kwargs={"hidden_sizes": (256, 512,1024, 512, 256)},
         steps_per_epoch=50, epochs=1000, gamma=0.99, clip_ratio=0.2, pi_lr=3e-4,
         vf_lr=1e-4, train_pi_iters=50, train_v_iters=50, lam=0.97, max_ep_len=50,
-        logger_kwargs=logger_kwargs, use_cuda=True)
+        logger_kwargs=logger_kwargs, use_cuda=True, trace_dir=trace_dir, today=today)
     # ppo(statellite_run,
     #     actor_critic=core_beam.RA_ActorCritic, ac_kwargs={"hidden_sizes": (256, 512, 1024, 512, 256)},
     #     steps_per_epoch=50, epochs=10000, gamma=0.99, clip_ratio=0.2, pi_lr=3e-5,

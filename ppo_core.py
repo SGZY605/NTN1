@@ -13,7 +13,7 @@ from torch.distributions.normal import Normal
 from torch.distributions.categorical import Categorical
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
+Network_Choose = Parameters.Network_Choose
 
 def combined_shape(length, shape=None):
     if shape is None:
@@ -46,7 +46,12 @@ class Actor(nn.Module):
         raise NotImplementedError
     
     def forward(self, obs, req_list ,act=None):
-        pi = self._distribution(obs,req_list)
+        if Network_Choose == 1:
+            pi = self._distribution(obs,req_list)
+        elif Network_Choose == 2:
+            pi, _ = self._distribution(obs,req_list)
+        else:
+            raise ValueError("Network_Action must be 1 or 2")
         logp_a = None
         if act is not None:
             logp_a = self._log_prob_from_distribution(pi, act)
@@ -74,21 +79,69 @@ class MultiCategoricalActor(Actor):
         # logits.reshape(mask.shape)
         # logits = logits.masked_fill_(mask, float('-inf'))
         # return logits
-        batch_size = 1 if len(obs.shape) == 1 else obs.shape[0]
-        inp = torch.cat((obs,req_list), 0 if len(obs.shape) == 1 else 1)
-        logits = self.logits_net(inp)
-        mask = ~(req_list.bool()).repeat(1, self.beam_open).view(batch_size,self.beam_open,self.user_num)
-        # print(f"logits  reshape之前：{logits}")
-        logits = logits.reshape(batch_size,self.beam_open,self.user_num)  # 
-        logits = logits.masked_fill_(mask, -np.inf)
+        if Network_Choose == 1:
+            batch_size = 1 if len(obs.shape) == 1 else obs.shape[0]
+            inp = torch.cat((obs,req_list), 0 if len(obs.shape) == 1 else 1)
+            logits = self.logits_net(inp)
+            mask = ~(req_list.bool()).repeat(1, self.beam_open).view(batch_size,self.beam_open,self.user_num)
+            # print(f"logits  reshape之前：{logits}")
+            logits = logits.reshape(batch_size,self.beam_open,self.user_num)
+            logits = logits.masked_fill_(mask, -np.inf)
+            return Categorical(logits=logits)
+            
+        elif Network_Choose == 2:
+            batch_size = 1 if len(obs.shape) == 1 else obs.shape[0]
+            inp = torch.cat((obs,req_list), 0 if len(obs.shape) == 1 else 1)
+            logits = self.logits_net(inp)
+            mask = ~(req_list.bool()).repeat(1, self.beam_open).view(batch_size,self.beam_open,self.user_num)
+            logits = logits.reshape(batch_size,self.beam_open,self.user_num)
+            logits = logits.masked_fill_(mask, -np.inf)
+            softmax_logits = F.softmax(logits, dim=-1)
+            allocation = {}
+            allocated_users = set()  # 已被分配的用户集合
+            for batch_idx in range(batch_size):
+                for beam_idx in range(self.beam_open):
+                    beam_probs = softmax_logits[batch_idx, beam_idx]
+                    # print("Allocated Users:", allocated_users)
+                    beam_probs[list(allocated_users)] = 0
+                    # 创建 Categorical 分布并从中采样
+                    if beam_probs.sum() > 0:
+                        try:
+                            beam_probs[beam_probs == 0] = -np.inf
+                            # print("beam_probs:", beam_probs)
+                            dist = Categorical(probs=F.softmax(beam_probs, dim=-1))
+                            user_idx = dist.sample().item()
+                            allocation[beam_idx] = user_idx
+                            allocated_users.add(user_idx)
+                        except Exception as e:
+                            raise ValueError(f"Error creating distribution: {e}")
+                    else:
+                        # 没有更多用户可分配时，跳过
+                        allocation[beam_idx] = None
+            action = [v for v in allocation.values()]
+            action = [-1 if x is None else x for x in action]
+            return Categorical(logits=logits), torch.tensor(action,dtype=int)
+        else:
+            raise ValueError("Network_Action must be 1 or 2")
 
-        # print(f"logits  reshape之后：{logits}")
-        return Categorical(logits=logits)
-
-    def _log_prob_from_distribution(self, pi,act):#logits, actions):
+    def _log_prob_from_distribution(self, pi, act):#logits, actions):
         """
         计算采样动作的对数概率
         """
+        if Network_Choose == 1:
+            if len(act.shape) == 2:  # 两个维度，第一个维度为batch_size，第二个维度为每个动作的维数
+                lp = pi.log_prob(act)
+                return torch.sum(lp, 1)  # 按照行为单位相加
+            else:
+                return torch.sum(pi.log_prob(act))
+        elif Network_Choose == 2:
+            if len(act.shape) == 2:  # 两个维度，第一个维度为batch_size，第二个维度为每个动作的维数
+                logp = pi.log_prob(act.clamp(min=0))
+                return torch.sum(logp, 1)  # 按照行为单位相加
+            else:
+                return torch.sum(pi.log_prob(act.clamp(min=0)))     # 这里可以用0替换-1吗？？？
+        else:
+            raise ValueError("Network_Action must be 1 or 2")
         # probs = F.softmax(logits, dim=-1)  # [batch_size, num_beams]
         # log_probs = torch.log(probs + 1e-8)  # 添加一个小值防止 log(0)
         # # actions 的形状为 [batch_size, max_num_actions]
@@ -170,20 +223,32 @@ class RA_ActorCritic(nn.Module):
         #     req_list = req_list.unsqueeze(0)  # [1, num_beams]
 
         with torch.no_grad():
-            pi = self.pi._distribution(obs, req_list)
-            # print("概率值：",pi.probs)
-            a = pi.sample()
-            logp_a = self.pi._log_prob_from_distribution(pi, a)
-            # input()
-            inp = torch.cat((obs, req_list), 0 if len(obs.shape) == 1 else 1)
-            v = self.v(inp)
+            if Network_Choose == 1:
+                pi = self.pi._distribution(obs, req_list)
+                # print("概率值：",pi.probs)
+                a = pi.sample()
+                logp_a = self.pi._log_prob_from_distribution(pi, a)
+                # input()
+                inp = torch.cat((obs, req_list), 0 if len(obs.shape) == 1 else 1)
+                v = self.v(inp)
+        
+            elif Network_Choose == 2:
+                pi, a = self.pi._distribution(obs, req_list)
+                # print("概率值：",pi.probs)
+                if self.use_cuda:
+                    a = a.cuda()
+                logp_a = self.pi._log_prob_from_distribution(pi, a)
+                # input()
+                inp = torch.cat((obs, req_list), 0 if len(obs.shape) == 1 else 1)
+                v = self.v(inp)
+                
+            else:
+                raise ValueError("Network_Action must be 1 or 2")
 
-            
-
-        if self.use_cuda:
-            return a.cpu().flatten().numpy(), v.cpu().numpy(), logp_a.cpu().flatten().numpy()
-        else:
-            return a.flatten().numpy(), v.numpy(), logp_a.flatten().numpy()
+            if self.use_cuda:
+                    return a.cpu().flatten().numpy(), v.cpu().numpy(), logp_a.cpu().flatten().numpy()
+            else:
+                    return a.flatten().numpy(), v.numpy(), logp_a.flatten().numpy()
             
             
             # logits = self.pi._distribution(obs, req_list)  # [batch_size, num_beams]

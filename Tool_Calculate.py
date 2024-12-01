@@ -6,7 +6,7 @@ import Parameters
 #from geopy.distance import geodesic
 import cvxpy as cp
 import warnings
-warnings.filterwarnings("ignore", message="This use of ``*`` has resulted in matrix multiplication.")
+
 
 #经纬度转化的计算
 def GeographicToCartesianCoordinates(latitude, longitude, altitude, sphType):
