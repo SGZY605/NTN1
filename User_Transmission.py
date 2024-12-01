@@ -6,7 +6,7 @@ import Parameters
 import Satellite_run
 from scipy.special import jn
 import Satellite_Bs
-import cvxpy as cp
+import Tool_Calculate
 
 
 class downlink_transmision_tool:
@@ -33,6 +33,7 @@ class downlink_transmision_tool:
         self.Power_BeamMax = Parameters.Power_BeamMax     #0.8*total
         self.Gain_beam = Parameters.Gain_Beam            #42dBi
         self.sate_threedB = Parameters.sate_threedB      #1dB
+        self.Power_Allcation_Sign = True  #是否考虑功率分配
         # self.path_loss = -209.53778  # dBw
         # self.PowerT_beam = 10  #dBw   #3W
         
@@ -129,6 +130,17 @@ class downlink_transmision_tool:
         Gain_matrix = self.get_sa_gain(req_user_info, req_list)#获取增益矩阵
         Path_loss_matrxi = self.get_sa_loss_path(req_user_info, req_list)#计算每个用户的路径损耗
         self.req_user_num = len(req_user_info)
+        Gain_self = 10 * np.log10(Gain_matrix/10) #dB
+        selectted_user = np.where(action == 1)[0] #用户id（从小到大）
+        h_sa = 10 ** ((Gain_self + self.Gr_user + Path_loss_matrxi[0]) /10)/self.noisy
+        h_sa = h_sa[np.ix_(selectted_user, selectted_user)] #得到卫星用户的信道系数矩阵
+        ##################进行功率分配###############################################
+        self.Beam_Power=action.copy()
+        if self.Power_Allcation_Sign:
+            self.Beam_Power[self.Beam_Power==1] = Tool_Calculate.Power_Allocation(h_sa) 
+        else:
+            self.Beam_Power[self.Beam_Power==1] = 10**(self.Power_Beam_average/10)
+        ############################################################################
         for i in range(self.req_user_num):
             interference=0
             if(action[i] == 0): #i 就是代表这个请求用户会被服务，计算这个用户的sinr就行
@@ -136,13 +148,13 @@ class downlink_transmision_tool:
             else:
                 #首先这个用户会接受来自自己的增益
                 Gain_self = 10 * np.log10(Gain_matrix[i][i]) #dBi
-                power_self = 10 ** ((Gain_self + self.Gr_user + Path_loss_matrxi[0][i]) /10) * (10**(self.Power_Beam_average/10)) #W
+                power_self = 10 ** ((Gain_self + self.Gr_user + Path_loss_matrxi[0][i]) /10) * self.Beam_Power[i] # W
                 for j in range(self.req_user_num):
                     if i == j or action[j] == 0:
                         continue
                     else:
                         Gain_interf = 10 * np.log10(Gain_matrix[j][i]) #dBi
-                        interf = 10 ** ((Gain_interf+self.Gr_user + Path_loss_matrxi[0][i]) /10) * (10 ** (self.Power_Beam_average/10)) #  #其他波束干扰+bs干扰阈值
+                        interf = 10 ** ((Gain_interf+self.Gr_user + Path_loss_matrxi[0][i]) /10) * self.Beam_Power[j] # 其他波束干扰+bs干扰阈值
                         interference += interf
                 interference += 10 ** (self.BS_TNT_TH / 10) #最后加上来自基站的干扰
                 #interference = 10 ** ((self.Gr_user + Path_loss_matrxi[0][i]) / 10) * interference 
@@ -193,7 +205,7 @@ class downlink_transmision_tool:
         v = h * np.sqrt((2 * (d1 + d2)) / (lambda_ * d1 * d2))
         # 计算总损耗
         DIFFRACTION_LOSS = 20 * np.log10(np.sqrt((v-0.1)**2 + 1) + v - 0.1) + 6.9
-        print("DIFFRACTION_LOSS",DIFFRACTION_LOSS)
+        # print("DIFFRACTION_LOSS",DIFFRACTION_LOSS)
         return - DIFFRACTION_LOSS
     def get_bs_gain(self, req_user_info,bs_lla):
         """
@@ -261,7 +273,7 @@ class downlink_transmision_tool:
                 for user_sa_id in user_sa:
                     
                     Gain_sa_interf = 10 * np.log10(Gain_sa_matrix[user_sa_id][user_bs_id]) #dBi  来自其他基站内卫星用户的增益矩阵
-                    interf = 10 ** ((Gain_sa_interf+self.Gr_user + Path_loss_sa[0][user_bs_id]) /10) * (10 ** (self.Power_Beam_average/10)) #  其他基站内被卫星服务的用户的干扰
+                    interf = 10 ** ((Gain_sa_interf+self.Gr_user + Path_loss_sa[0][user_bs_id]) /10) * self.Beam_Power[user_sa_id] #  其他基站内被卫星服务的用户的干扰
                     interference += interf
 
                 #interference = 10 ** ((self.Gr_user + Path_loss_matrxi[user_bs_id]) / 10) * interference 

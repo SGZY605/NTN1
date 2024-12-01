@@ -121,6 +121,7 @@ class Env:
         rrr, rrr_tx = ppo_reward.get_paper_reward_info(self.extra_infor,MAX_DOWN_Rate/1000) #mbps 
         _, counts = np.unique(action_beam, return_counts=True)
         rrr = 0 if np.any(counts > 1) else rrr
+        rrr_tx = 0 if np.any(counts > 1) else rrr_tx
         if epoch>20:
             Tool_Calculate.plot_user_position(S_next["Lat"],S_next["Lon"],S_next["BsIfServ"],DOWN_Rate,MAX_DOWN_Rate,
                                           self.bs_xyz,self.bs_ridth,epoch)

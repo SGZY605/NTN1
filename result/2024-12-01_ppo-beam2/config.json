@@ -16,7 +16,7 @@
     "gamma":	0.99,
     "lam":	0.97,
     "logger":	{
-        "<spinup.utils.logx.EpochLogger object at 0x00000277190EE3D0>":	{
+        "<spinup.utils.logx.EpochLogger object at 0x00000287990E5550>":	{
             "epoch_dict":	{},
             "exp_name":	"ppo-beam2",
             "first_row":	true,

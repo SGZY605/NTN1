@@ -157,7 +157,7 @@ def ppo(env_fn, actor_critic=ppo_core.RA_ActorCritic, ac_kwargs=dict(), seed=0,
     logger.save_config(locals())
 
     # Random seed
-    seed += 10000 * random.randint(0,1000)
+    seed += 10000 * proc_id()
     torch.manual_seed(seed)
     np.random.seed(seed)
 
@@ -301,6 +301,7 @@ def ppo(env_fn, actor_critic=ppo_core.RA_ActorCritic, ac_kwargs=dict(), seed=0,
             tti_rdelay = 0 #! 暂时没有考虑时延
             threa_b = 1
             tti_reward = threa_b*rrr_tx + (1-threa_b)*tti_rdelay
+            print("=======================奖励=================\n",tti_reward)
             ###########################################################################################
             ep_tx += info_sa['Down_TxData']#每一个epoch的总传输量
             ep_newbytes += info_sa['NewData']

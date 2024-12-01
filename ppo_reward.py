@@ -55,7 +55,7 @@ def get_paper_reward_info(extra,MAX_DOWN_Rate):
     Bs_step_ave_downthroughput = Bs_step_downthroughput / len(bs_extra) if len(bs_extra) > 0 else 0
 
     # r1 = reward_Qos(Sate_step_Qos, Bs_step_Qos)
-    r1 =  0.5 * (sum(Qos_sa)/len(Qos_sa)) + 0.5 * (sum(Qos_bs)/len(Qos_bs))
+    r1 =  1 * (sum(Qos_sa)/len(Qos_sa)) #+ 0.5 * (sum(Qos_bs)/len(Qos_bs))
     r1_tx = 1 * (sum(Qos_sa_tx)/len(Qos_sa_tx)) #+ 0.5 * (sum(Qos_bs)/len(Qos_bs))
     print("---------------------------------")
     print("reward",r1)
@@ -91,8 +91,8 @@ def reward_bs_Qos(Request, Capacity, MAX_DOWN_Rate):
     Output:基站用户的Qos
     """
     eta_n=capacity_request_ratio(Request,Capacity,MAX_DOWN_Rate)
-    print("---------------------------------")
-    print("eta_n",eta_n)
+    # print("---------------------------------")
+    # print("eta_n",eta_n)
     return eta_n
 
 
