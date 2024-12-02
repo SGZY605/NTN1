@@ -95,35 +95,32 @@ class MultiCategoricalActor(Actor):
             batch_size = 1 if len(obs.shape) == 1 else obs.shape[0]
             inp = torch.cat((obs,req_list), 0 if len(obs.shape) == 1 else 1)
             logits = self.logits_net(inp)
-            mask = ~(req_list.bool()).repeat(1, self.beam_open).view(batch_size,self.beam_open,self.user_num)
-            mask_temp = torch.zeros((batch_size,self.beam_open,1),device=device).bool()
-            mask = torch.cat((mask_temp,mask),2)
+            # mask = ~(req_list.bool()).repeat(1, self.beam_open).view(batch_size,self.beam_open,self.user_num)
+            # mask_temp = torch.zeros((batch_size,self.beam_open,1),device=device).bool()
+            # mask = torch.cat((mask_temp,mask),2)
             logits = logits.reshape(batch_size,self.beam_open,self.user_num+1)
-            logits = logits.masked_fill_(mask, -np.inf)
-            softmax_logits = F.softmax(logits, dim=-1)
+            # logits = logits.masked_fill_(mask, -np.inf)
             allocation = {}
             allocated_users = set()  # 已被分配的用户集合
-            for batch_idx in range(batch_size):
-                for beam_idx in range(self.beam_open):
-                    beam_probs = softmax_logits[batch_idx, beam_idx]
-                    # print("Allocated Users:", allocated_users)
-                    beam_probs[list(allocated_users)] = 0
-                    # 创建 Categorical 分布并从中采样
-                    if beam_probs.sum() > 0:
-                        try:
-                            beam_probs[beam_probs == 0] = -np.inf
+            action = []
+            if batch_size == 1:
+                for batch_idx in range(batch_size):
+                    for beam_idx in range(self.beam_open):
+                        beam_logits = logits[batch_idx, beam_idx]
+                        beam_logits[0] = -torch.inf  # 不能采样到不分配
+                        beam_logits[list(allocated_users)] = -torch.inf   # 不能采样到已分配的用户
+                        # 创建 Categorical 分布并从中采样
+                        if not torch.all(beam_logits == -np.inf):
                             # print("beam_probs:", beam_probs)
-                            dist = Categorical(probs=F.softmax(beam_probs, dim=-1))
-                            user_idx = dist.sample().item()
-                            allocation[beam_idx] = user_idx
-                            allocated_users.add(user_idx)
-                        except Exception as e:
-                            raise ValueError(f"Error creating distribution: {e}")
-                    else:
-                        # 没有更多用户可分配时，跳过
-                        allocation[beam_idx] = None
-            action = [v for v in allocation.values()]
-            action = [-1 if x is None else x for x in action]
+                            dist = Categorical(logits=beam_logits)
+                            idx = dist.sample().item()
+                            allocation[beam_idx] = idx
+                            allocated_users.add(idx)
+                        else:
+                            # 没有更多用户可分配时，跳过
+                            allocation[beam_idx] = None
+                action = [v for v in allocation.values()]
+                action = [0 if x is None else x for x in action]
             return Categorical(logits=logits), torch.tensor(action,dtype=int)
         else:
             raise ValueError("Network_Action must be 1 or 2")
@@ -137,15 +134,14 @@ class MultiCategoricalActor(Actor):
                 logp = pi.log_prob(act)
                 return torch.sum(logp, 1)  # 按照行为单位相加
             else:
-                return torch.sum(pi.log_prob(act))
+                logp = pi.log_prob(act)
+                return torch.sum(logp)
         elif Network_Choose == 2:
             if len(act.shape) == 2:  # 两个维度，第一个维度为batch_size，第二个维度为每个动作的维数
-                logp = pi.log_prob(act)     # 这里可以用0替换-1吗？？？
-                # logp[logp == -torch.inf] = 0  # 或者其他适合的处理方式
+                logp = pi.log_prob(act)
                 return torch.sum(logp, 1)  # 按照行为单位相加
             else:
-                logp = pi.log_prob(act)     # 这里可以用0替换-1吗？？？
-                # logp[logp == -torch.inf] = 0  # 或者其他适合的处理方式
+                logp = pi.log_prob(act)
                 return torch.sum(logp)
         else:
             raise ValueError("Network_Action must be 1 or 2")
@@ -253,9 +249,9 @@ class RA_ActorCritic(nn.Module):
                 raise ValueError("Network_Action must be 1 or 2")
 
             if self.use_cuda:
-                    return (a-1).cpu().flatten().numpy(), v.cpu().numpy(), logp_a.cpu().flatten().numpy()
+                    return a.cpu().flatten().numpy(), v.cpu().numpy(), logp_a.cpu().flatten().numpy()
             else:
-                    return (a-1).flatten().numpy(), v.numpy(), logp_a.flatten().numpy()
+                    return a.flatten().numpy(), v.numpy(), logp_a.flatten().numpy()
             
             
             # logits = self.pi._distribution(obs, req_list)  # [batch_size, num_beams]

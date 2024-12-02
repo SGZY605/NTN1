@@ -292,9 +292,8 @@ def ppo(env_fn, trace_dir, today, actor_critic=ppo_core.RA_ActorCritic, ac_kwarg
             obs = torch.as_tensor(o["ReqData"], dtype=torch.float32)
             mask = torch.as_tensor(o["Req_list"])
             a, v, logp = ac.step(obs,mask)
-            print("=======================动作a=================\n",a)
-            print("action",a)
-            o_info, next_o, extra,reward,rrr_tx,done = env.step(a)
+            print("=======================动作a=================\n",a-1)
+            o_info, next_o, extra,reward,rrr_tx,done = env.step(a-1)
             print(o_info)
             info_sa,info_bs=get_env_info(extra)
             # 当前的一个obs_tti
@@ -314,7 +313,7 @@ def ppo(env_fn, trace_dir, today, actor_critic=ppo_core.RA_ActorCritic, ac_kwarg
             ep_delay_normal+=tti_rdelay
             ep_len += 1
             ##########################################################################################
-            buf.store(o, a+1, v, logp, tti_reward)
+            buf.store(o, a, v, logp, tti_reward)
             pbar.update(1)
             o = next_o
             timeout = ep_len == max_ep_len  # 一个episode

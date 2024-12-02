@@ -1,7 +1,7 @@
 # -*-coding:utf-8-*-
 
 #网络参数
-Network_Choose = 2
+Network_Choose = 1
 
 #覆盖参数
 center_latitude = 36.0735  #°                中心维度    

@@ -16,15 +16,15 @@
     "gamma":	0.99,
     "lam":	0.97,
     "logger":	{
-        "<spinup.utils.logx.EpochLogger object at 0x0000020ABF9948B0>":	{
+        "<spinup.utils.logx.EpochLogger object at 0x0000026C190E9640>":	{
             "epoch_dict":	{},
             "exp_name":	"ppo-beam2",
             "first_row":	true,
             "log_current_row":	{},
             "log_headers":	[],
-            "output_dir":	"D:\\DevelopSoftware\\GitCODE\\NTN1lyc/result\\2024-12-02_ppo-beam2",
+            "output_dir":	"D:\\AAA_A_KeYan\\CODE\\GitCODE\\NTN1/result\\2024-12-02_ppo-beam2",
             "output_file":	{
-                "<_io.TextIOWrapper name='D:\\\\DevelopSoftware\\\\GitCODE\\\\NTN1lyc/result\\\\2024-12-02_ppo-beam2\\\\progress.txt' mode='w' encoding='cp936'>":	{
+                "<_io.TextIOWrapper name='D:\\\\AAA_A_KeYan\\\\CODE\\\\GitCODE\\\\NTN1/result\\\\2024-12-02_ppo-beam2\\\\progress.txt' mode='w' encoding='cp936'>":	{
                     "mode":	"w"
                 }
             }
@@ -32,7 +32,7 @@
     },
     "logger_kwargs":	{
         "exp_name":	"ppo-beam2",
-        "output_dir":	"D:\\DevelopSoftware\\GitCODE\\NTN1lyc/result\\2024-12-02_ppo-beam2"
+        "output_dir":	"D:\\AAA_A_KeYan\\CODE\\GitCODE\\NTN1/result\\2024-12-02_ppo-beam2"
     },
     "max_ep_len":	50,
     "pi_lr":	0.0003,
@@ -41,7 +41,7 @@
     "steps_per_epoch":	50,
     "target_kl":	0.01,
     "today":	"2024-12-02-PM",
-    "trace_dir":	"D:\\DevelopSoftware\\GitCODE\\NTN1lyc/result",
+    "trace_dir":	"D:\\AAA_A_KeYan\\CODE\\GitCODE\\NTN1/result",
     "train_pi_iters":	50,
     "train_v_iters":	50,
     "use_cuda":	true,
