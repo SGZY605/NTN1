@@ -314,7 +314,7 @@ def ppo(env_fn, trace_dir, today, actor_critic=ppo_core.RA_ActorCritic, ac_kwarg
             ep_delay_normal+=tti_rdelay
             ep_len += 1
             ##########################################################################################
-            buf.store(o, a, v, logp, tti_reward)
+            buf.store(o, a+1, v, logp, tti_reward)
             pbar.update(1)
             o = next_o
             timeout = ep_len == max_ep_len  # 一个episode

@@ -3,6 +3,8 @@
         "hidden_sizes":	[
             256,
             512,
+            1024,
+            512,
             256
         ]
     },
@@ -14,7 +16,7 @@
     "gamma":	0.99,
     "lam":	0.97,
     "logger":	{
-        "<spinup.utils.logx.EpochLogger object at 0x0000020001604880>":	{
+        "<spinup.utils.logx.EpochLogger object at 0x0000020ABF9948B0>":	{
             "epoch_dict":	{},
             "exp_name":	"ppo-beam2",
             "first_row":	true,
@@ -33,12 +35,12 @@
         "output_dir":	"D:\\DevelopSoftware\\GitCODE\\NTN1lyc/result\\2024-12-02_ppo-beam2"
     },
     "max_ep_len":	50,
-    "pi_lr":	0.0001,
+    "pi_lr":	0.0003,
     "save_freq":	30,
     "seed":	0,
     "steps_per_epoch":	50,
     "target_kl":	0.01,
-    "today":	"2024-12-02-AM",
+    "today":	"2024-12-02-PM",
     "trace_dir":	"D:\\DevelopSoftware\\GitCODE\\NTN1lyc/result",
     "train_pi_iters":	50,
     "train_v_iters":	50,

@@ -58,7 +58,8 @@ class user_update:
         
         self.cbrrate = Parameters.cbrrate    # 固定码率0.5Mb, 可修改为可变码率VBR;
         self.ontime = 0  # 业务持续时间
-        self.offtime = 0   # 业务关闭时间
+        self.offtime_restore = offtime
+        self.offtime = np.random.exponential(offtime)
         self.update_user_position(self.UEcenter, self.UEmaxdistance, self.all_bs, self.randomangle)     # 更新用户位置类信息  
         self.update_user_traffic(ontime, offtime, self.cbrrate, Action_beam, DOWN_Rate ,user_index)    # 更新用户业务类信息
         self.curr_BsIfServ = bs_if_serv[user_index]   # TODO:已更新
@@ -224,9 +225,37 @@ class user_update:
         (2) 更新用户的其他业务信息;
         """
         self.generate_traffic_duration(ontime, offtime)#更新用户业务持续时间
+        self.trafficduration()
         self.update_traffic_info(cbrrate, DOWN_Rate,Action_Beam, user_index)
     
-
+    def trafficduration(self):
+        type = 'None'
+        if self.offtime > 0:
+            self.offtime -= 1
+            if self.offtime < 0:
+                self.offtime = 0
+                ################
+                traffic_choice = np.random.choice([1, 2, 3])
+                if traffic_choice == 1:
+                    self.ontime = np.random.exponential(self.traffictype['text'])
+                    type = 'text'
+                    self.qci = self.qci_type[type]
+                elif traffic_choice == 2:
+                    self.ontime = np.random.exponential(self.traffictype['voice'])
+                    type = 'voice'
+                    self.qci = self.qci_type[type]
+                else:
+                    self.ontime = np.random.exponential(self.traffictype['video'])
+                    type = 'video'
+                    self.qci = self.qci_type[type]
+        elif self.offtime == 0 and self.ontime > 0:
+            self.ontime -= 1
+            if self.ontime < 0:
+                self.ontime = 0
+                self.offtime = np.random.exponential(self.offtime_restore)
+                self.qci = 0
+        return self.ontime
+    
     def generate_traffic_duration(self, init_ontime, init_offtime):
         """
         业务类更新函数1
@@ -395,11 +424,10 @@ def choose_user_bsifservice(user_num, last_user_info, action_beam):    # TODO:�
     user_priority = []
     for i in range(user_num):
         user_priority.append((i, last_user_info['Dis_Bs'][i]))                             # init和update中的距离变量名不一样
-    user_priority.sort(key=lambda x: x[1])  # 按距离从小到大排序(距离越小优先级越高)
-    
+    user_priority = choose_by_random()
     
     # 按优先级分配基站资源
-    for user_idx, distance in user_priority:
+    for user_idx, _ in user_priority:
     # for user_idx in range(len(userlist)):
         bs = int(last_user_info['BsID'][user_idx])  # 获取基站id
         if action_beam[user_idx] == 0:  # 只考虑基站服务的用户
@@ -418,3 +446,23 @@ def choose_user_bsifservice(user_num, last_user_info, action_beam):    # TODO:�
             bs_state[bs]['user_sa'].append(user_idx)
     #print("bs_if_service:", bs_if_service)
     return bs_if_service,bs_state
+
+
+def choose_by_distance(last_user_info):
+    """
+    按照距离进行排序
+    """
+    user_priority=[]
+    for i in range(Parameters.user_number):
+        user_priority.append((i, last_user_info['Dis_Bs'][i]))                             # init和update中的距离变量名不一样
+    user_priority.sort(key=lambda x: x[1])  # 按距离从小到大排序(距离越小优先级越高)
+    return user_priority
+def choose_by_random():
+    """
+    随机排序
+    """
+    user_priority=[]
+    for i in range(Parameters.user_number):
+        user_priority.append((i,0))    
+    random.shuffle(user_priority)                      
+    return user_priority
