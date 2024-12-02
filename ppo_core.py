@@ -92,11 +92,6 @@ class MultiCategoricalActor(Actor):
         elif Network_Choose == 2:
             batch_size = 1 if len(obs.shape) == 1 else obs.shape[0]
             inp = torch.cat((obs,req_list), 0 if len(obs.shape) == 1 else 1)
-            if torch.any(torch.isnan(inp)):
-                print("检查NAN!!!!!!!!!!!!!!!!!", torch.isnan(inp))
-                raise ValueError("nan in input")
-            if torch.any():
-                print("检查INF!!!!!!!!!!!!!!!!!", torch.isinf(inp))
             logits = self.logits_net(inp)
             mask = ~(req_list.bool()).repeat(1, self.beam_open).view(batch_size,self.beam_open,self.user_num)
             logits = logits.reshape(batch_size,self.beam_open,self.user_num)
@@ -141,10 +136,13 @@ class MultiCategoricalActor(Actor):
                 return torch.sum(pi.log_prob(act))
         elif Network_Choose == 2:
             if len(act.shape) == 2:  # 两个维度，第一个维度为batch_size，第二个维度为每个动作的维数
-                logp = pi.log_prob(act.clamp(min=0))
+                logp = pi.log_prob(act.clamp(min=0))     # 这里可以用0替换-1吗？？？
+                logp[logp == -torch.inf] = 0  # 或者其他适合的处理方式
                 return torch.sum(logp, 1)  # 按照行为单位相加
             else:
-                return torch.sum(pi.log_prob(act.clamp(min=0)))     # 这里可以用0替换-1吗？？？
+                logp = pi.log_prob(act.clamp(min=0))     # 这里可以用0替换-1吗？？？
+                logp[logp == -torch.inf] = 0  # 或者其他适合的处理方式
+                return torch.sum(logp)
         else:
             raise ValueError("Network_Action must be 1 or 2")
         # probs = F.softmax(logits, dim=-1)  # [batch_size, num_beams]
